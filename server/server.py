@@ -272,8 +272,6 @@ class SenseVoiceSTTHandler(BaseHandler):
 
     def setup(
             self,
-            # model_name = "paraformer-zh-streaming",
-            # model_revision = "v2.0.4",
             model_name = "FunAudioLLM/SenseVoiceSmall",
             device="cuda:1",
             hub="hf",  
@@ -637,6 +635,7 @@ class ChatTTSHandler(BaseHandler):
         
         ###################################
         # Sample a speaker from Gaussian.
+        # https://huggingface.co/spaces/taa/ChatTTS_Speaker  音色控制
         rand_spk = self.model.sample_random_speaker()
         # print(rand_spk) # save it for later timbre recovery
 
