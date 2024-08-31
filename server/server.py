@@ -260,7 +260,7 @@ class VADHandler(BaseHandler):
             if duration_ms < self.min_speech_ms or duration_ms > self.max_speech_ms:
                 logger.info(f"audio input of duration: {len(array) / self.sample_rate}s, skipping")
             else:
-                # self.should_listen.clear()
+                self.should_listen.clear()
                 logger.info("Stop listening")
                 yield array
 
@@ -637,7 +637,6 @@ class ChatTTSHandler(BaseHandler):
         
         ###################################
         # Sample a speaker from Gaussian.
-
         rand_spk = self.model.sample_random_speaker()
         # print(rand_spk) # save it for later timbre recovery
 
@@ -811,18 +810,15 @@ class ChatTTSHandler(BaseHandler):
         for i, audio_chunk in enumerate(streamer):
             if i == 0:
                 logger.info(f"Time to first audio: {perf_counter() - pipeline_start:.3f}")
+            # 将音频数据从浮点数格式转换为 16 位整数格式
+            # 这里不处理会出现很多背景噪声
             audio_chunk = np.int16(audio_chunk * 32767)
             yield audio_chunk
 
-        self.should_listen.set()
-
+        # self.should_listen.set()
         # thread = Thread(target=ChatTTSHandler.generate, kwargs={"self":self,"streamchat":streamchat, "output_format":None})
         # thread.start()
-            
-
         logger.info("wav_chunk tts processed")
-
-
         self.should_listen.set() # 设置监听状态
 
 
@@ -977,12 +973,6 @@ def main():
         force=True,
     )
     logger = logging.getLogger(__name__)
-
-    # torch compile logs
-    # torch._logging.set_logs(graph_breaks=True, recompiles=True, cudagraphs=True)
-    # from funasr import AutoModel
-
-    
     logger = logging.getLogger("Server_logger")
     logger.setLevel(logging.DEBUG)
 
@@ -993,7 +983,7 @@ def main():
     logger.addHandler(console_handler)
 
     # 测试日志是否正常打印
-    logger.info("安装funasr后需要使用自定义日志记录器。")
+    logger.info("安装funasr后需要使用自定义日志记录器")
 
     #Build the pipeline
     stop_event = Event()
@@ -1063,10 +1053,8 @@ def main():
 
     # Run the pipeline
     try:
-        # pipeline_manager = ThreadManager([vad, recv_handler, send_handler])
         # pipeline_manager = ThreadManager([vad, sersevoice_stt, llm, chat_tts, recv_handler, send_handler])
         pipeline_manager = ThreadManager([vad, whisper_stt, llm, chat_tts, recv_handler, send_handler])
-        # pipeline_manager = ThreadManager([chat_tts, recv_handler, send_handler])
         pipeline_manager.start()
 
     except KeyboardInterrupt:
