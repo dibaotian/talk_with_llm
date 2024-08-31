@@ -16,7 +16,7 @@ class ListenAndPlayArguments:
         }
     )
     recv_rate: int = field(
-        default=44100,
+        default=24000,
         metadata={
             "help": "In Hz. Default is 44100."
         }
