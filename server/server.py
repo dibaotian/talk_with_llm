@@ -24,10 +24,10 @@ from transformers import (
     TextIteratorStreamer,
 )
 
-from parler_tts import (
-    ParlerTTSForConditionalGeneration,
-    ParlerTTSStreamer
-)
+# from parler_tts import (
+#     ParlerTTSForConditionalGeneration,
+#     ParlerTTSStreamer
+# )
 
 from nltk.tokenize import sent_tokenize
 
