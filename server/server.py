@@ -967,9 +967,11 @@ class ParlerTTSHandler(BaseHandler):
 # Main
 def main():
      
+    
+    #create log process
     global logger
     logging.basicConfig(
-        filename='server.log',  # 将日志写入文件
+        filename='server.log',  # logfile
         level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         force=True,
@@ -980,10 +982,10 @@ def main():
     # torch._logging.set_logs(graph_breaks=True, recompiles=True, cudagraphs=True)
     # from funasr import AutoModel
 
+    
     logger = logging.getLogger("Server_logger")
     logger.setLevel(logging.DEBUG)
 
-    # 添加处理器
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -1003,6 +1005,7 @@ def main():
     text_prompt_queue = Queue()
     lm_response_queue = Queue()
 
+    # create voice data receiver instance
     recv_handler = SocketReceiver(
         stop_event, 
         recv_audio_chunks_queue, 
@@ -1012,6 +1015,7 @@ def main():
         chunk_size=chunk_size_cfg,
     )
 
+    # create voice data send instance
     send_handler = SocketSender(
         stop_event, 
         send_audio_chunks_queue,
@@ -1019,6 +1023,7 @@ def main():
         port=2795,
     )
 
+    # create vad instance
     vad = VADHandler(
         stop_event,
         queue_in=recv_audio_chunks_queue,
@@ -1026,6 +1031,7 @@ def main():
         setup_args=(should_listen,),
     )
 
+    #create sensevoice stt instance
     sersevoice_stt = SenseVoiceSTTHandler(
         stop_event,
         queue_in=spoken_prompt_queue,
@@ -1033,34 +1039,27 @@ def main():
         # setup_args=(should_listen,),
     )
 
+    #create whisper stt instance
     whisper_stt = WhisperSTTHandler(
         stop_event,
         queue_in=spoken_prompt_queue,
         queue_out=text_prompt_queue,
     )
 
-    # 创建大语言模型实例
+    # create LLM instance
     llm = LargeLanguageModelHandler(
         stop_event,
         queue_in=text_prompt_queue,
         queue_out=lm_response_queue,
     )
 
-    # 创建TTS实例
+    # create TTS instance
     chat_tts = ChatTTSHandler(
         stop_event,
         queue_in=lm_response_queue,
         queue_out=send_audio_chunks_queue,
         setup_args=(should_listen,),
     )
-
-    # parler_tts = ParlerTTSHandler(
-    #     stop_event,
-    #     queue_in=lm_response_queue,
-    #     queue_out=send_audio_chunks_queue,
-    #     setup_args=(should_listen,),
-    # )  
-
 
     # Run the pipeline
     try:
