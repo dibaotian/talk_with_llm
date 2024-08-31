@@ -41,6 +41,9 @@ import ChatTTS
 import torchaudio
 import random
 
+import lzma
+import pybase16384 as b14
+
 # chunk size 不能大于1024 否则vad处理会出错
 chunk_size_cfg=1024
 
@@ -525,7 +528,7 @@ class LargeLanguageModelHandler(BaseHandler):
             model=self.model, 
             tokenizer=self.tokenizer, 
             torch_dtype="auto", 
-            max_new_tokens = 1024,  # 设置生成的新 maxtoken 数量
+            max_new_tokens = 512,  # 设置生成的新 maxtoken 数量 输出序列太长会导致TTS处理不过来
             min_new_tokens = 10  # 设置生成的新 mintoken 数量
         ) 
 
@@ -635,23 +638,49 @@ class ChatTTSHandler(BaseHandler):
         
         ###################################
         # Sample a speaker from Gaussian.
-        # https://huggingface.co/spaces/taa/ChatTTS_Speaker  音色控制
         rand_spk = self.model.sample_random_speaker()
         # print(rand_spk) # save it for later timbre recovery
-
         self.params_infer_code = self.model.InferCodeParams(
             spk_emb = rand_spk, # add sampled speaker 
-            temperature = temperature,   # using custom temperature
-            top_P = top_P,        # top P decode
-            top_K = top_K,         # top K decode
+            temperature = temperature,   # 控制音频情感波动性，范围为 0-1，数字越大，波动性越大
+            top_P = top_P,        # 控制音频的情感相关性，范围为 0.1-0.9，数字越大，相关性越高
+            top_K = top_K,        # 控制音频的情感相似性，范围为 1-20，数字越小，相似性越高
+        )
+
+
+        # 指定音色种子值每次生成 spk_emb 和重复使用预生成好的 spk_emb 效果有较显著差异
+        # 使用 .pt 音色文件或者音色码效果会好一些
+        # pt 下载https://huggingface.co/spaces/taa/ChatTTS_Speaker  音色控制
+        spk = torch.load("pt/seed_929_restored_emb.pt", map_location=torch.device('cpu')).detach()
+        spk_emb_str = ChatTTSHandler._encode_spk_emb(spk)
+
+        self.params_infer_code = self.model.InferCodeParams(
+            spk_emb = spk_emb_str, # add sampled speaker 
+            temperature = temperature,   # 控制音频情感波动性，范围为 0-1，数字越大，波动性越大
+            top_P = top_P,        # 控制音频的情感相关性，范围为 0.1-0.9，数字越大，相关性越高
+            top_K = top_K,        # 控制音频的情感相似性，范围为 1-20，数字越小，相似性越高
         )
 
         # use oral_(0-9), laugh_(0-2), break_(0-7) 
         # to generate special token in text to synthesize.
-        # self.params_refine_text = self.model.RefineTextParams(
-        #     prompt='[oral_2][laugh_0][break_6]',
-        # )
+        self.params_refine_text = self.model.RefineTextParams(
+            prompt='[oral_2][laugh_0][break_6]',
+        )
 
+
+    @staticmethod
+    @torch.no_grad()
+    def _encode_spk_emb(spk_emb: torch.Tensor) -> str:
+        arr: np.ndarray = spk_emb.to(dtype=torch.float16, device="cpu").numpy()
+        s = b14.encode_to_string(
+            lzma.compress(
+                arr.tobytes(),
+                format=lzma.FORMAT_RAW,
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+            ),
+        )
+        del arr
+        return s
 
     # stream状态更新。数据量不足的stream，先存一段时间，直到拿到足够数据，监控小块数据情况
     @staticmethod
@@ -802,6 +831,7 @@ class ChatTTSHandler(BaseHandler):
             skip_refine_text=True,
             stream=True,
             params_infer_code=self.params_infer_code,
+            params_refine_text=self.params_refine_text,
         )
 
         streamer = ChatTTSHandler.generate(self, streamchat, output_format=None)
@@ -962,7 +992,6 @@ class ParlerTTSHandler(BaseHandler):
 # Main
 def main():
      
-    
     #create log process
     global logger
     logging.basicConfig(
