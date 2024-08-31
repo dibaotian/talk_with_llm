@@ -215,8 +215,9 @@ class SocketSender:
 
 class VADHandler(BaseHandler):
     """
-    Handles voice activity detection. When voice activity is detected, audio will be accumulated until the end of speech is detected and then passed
-    to the following part.
+    Handles voice activity detection. 
+    When voice activity is detected, audio will be accumulated until the end of speech is detected 
+    and then passed to the LLM.
     ref: https://huggingface.co/spaces/vishnuverse-in/silero-vad/blob/main/app.py#L10
     """
 
@@ -238,11 +239,13 @@ class VADHandler(BaseHandler):
         self.max_speech_ms = max_speech_ms
         # self.model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad',force_reload=True)
 
+
         self.model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
                                             model='silero_vad',
                                             onnx=False)
 
         # print("VADIterator", self.model)
+        # use the utils's VADIterator cause problme, so rewrite it in local
         self.iterator = VADIterator(
             self.model,
             threshold=thresh,
@@ -637,20 +640,20 @@ class ChatTTSHandler(BaseHandler):
         self.model.load(compile=compile_mode, device=device) # Set to compile =  True for better performance
         
         ###################################
-        # Sample a speaker from Gaussian.
-        rand_spk = self.model.sample_random_speaker()
-        # print(rand_spk) # save it for later timbre recovery
-        self.params_infer_code = self.model.InferCodeParams(
-            spk_emb = rand_spk, # add sampled speaker 
-            temperature = temperature,   # 控制音频情感波动性，范围为 0-1，数字越大，波动性越大
-            top_P = top_P,        # 控制音频的情感相关性，范围为 0.1-0.9，数字越大，相关性越高
-            top_K = top_K,        # 控制音频的情感相似性，范围为 1-20，数字越小，相似性越高
-        )
+        # # Sample a speaker from Gaussian.
+        # rand_spk = self.model.sample_random_speaker()
+        # # print(rand_spk) # save it for later timbre recovery
+        # self.params_infer_code = self.model.InferCodeParams(
+        #     spk_emb = rand_spk, # add sampled speaker 
+        #     temperature = temperature,   # 控制音频情感波动性，范围为 0-1，数字越大，波动性越大
+        #     top_P = top_P,        # 控制音频的情感相关性，范围为 0.1-0.9，数字越大，相关性越高
+        #     top_K = top_K,        # 控制音频的情感相似性，范围为 1-20，数字越小，相似性越高
+        # )
 
 
         # 指定音色种子值每次生成 spk_emb 和重复使用预生成好的 spk_emb 效果有较显著差异
         # 使用 .pt 音色文件或者音色码效果会好一些
-        # pt 下载https://huggingface.co/spaces/taa/ChatTTS_Speaker  音色控制
+        # pt 下载 https://huggingface.co/spaces/taa/ChatTTS_Speaker  音色控制
         spk = torch.load("pt/seed_929_restored_emb.pt", map_location=torch.device('cpu')).detach()
         spk_emb_str = ChatTTSHandler._encode_spk_emb(spk)
 
