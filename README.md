@@ -34,5 +34,6 @@
 #### Other
 ##### ref: https://github.com/huggingface/speech-to-speech
 ##### The server was tested at python 3.10
+##### the system is verifyed on the Nvidia V100(dual), will move to AMD RX7900 or MI210/MI300
 ##### You may need install ffmpeg in the client system
 ##### contact laba22@163.com if you have question
