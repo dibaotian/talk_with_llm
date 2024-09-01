@@ -13,10 +13,10 @@
 - python client.py --host <host_ip>
 
 #### Topology 
-#### client(PCM 16000 Int16 singal channel)<---udp--->server(PCM 24000 Int16 singal channel)
+##### client(PCM 16000 Int16 singal channel)<---udp--->server(PCM 24000 Int16 singal channel)
 
-#### server pipline
-#### UDP PCM receiver channel->VAD(google model)->STT(sensevoice/wishper)->LLM(Qwen2 7B)->TTS(Chattts)->UDP PCM send channel
+#### Server pipline
+##### UDP PCM receiver channel->VAD(google model)->STT(sensevoice/wishper)->LLM(Qwen2 7B)->TTS(Chattts)->UDP PCM send channel
 
 #### Feature
 - UDP connection. client connect with server through UDP （send 9527/receive 2795）
